@@ -4,6 +4,28 @@ import re, json, openpyxl
 raw        = open("api_raw.txt").read()
 quest_meta = json.load(open("quest_meta.json"))          # name -> {number, difficulty}
 
+# ── Quest ID normalisation ─────────────────────────────────────────────────────
+# Recipe for Disaster sub-quests are numbered 100.1–100.10 in the wiki.
+# To keep all IDs as integers in SAS/Excel:
+#   100.x  →  100 + x          (so 100.1→101, 100.10→110)
+#   n≥101  →  n + 10           (shift everything after RfD up by 10)
+#   otherwise unchanged
+def to_int_id(number_str):
+    s = str(number_str)
+    if not s:
+        return s
+    if '.' in s:
+        parts = s.split('.')
+        try:
+            return int(parts[0]) + int(parts[1])
+        except ValueError:
+            return s
+    try:
+        n = int(s)
+        return n + 10 if n >= 101 else n
+    except ValueError:
+        return s
+
 # ── Difficulty tier -> numeric score ──────────────────────────────────────────
 DIFFICULTY_SCORE = {
     "Novice":       1,
@@ -98,12 +120,20 @@ rows_ref  = []   # reference table rows
 rows_link = []   # SAS edge-list rows
 rows_node = []   # node table (one row per quest)
 
+# Warn about quests that have no entry in the Lua requirements module.
+no_lua_data = [n for n in quest_meta if n not in lua_blocks]
+if no_lua_data:
+    print(f"WARNING: {len(no_lua_data)} quest(s) have no data in api_raw.txt "
+          f"(no prerequisite edges will be generated for them):")
+    for n in sorted(no_lua_data):
+        print(f"  - {n}")
+
 # Iterate over quest_meta so every known quest becomes a node, even those
 # absent from the Lua module (they just have no prerequisites).
 for name, meta in quest_meta.items():
     block = lua_blocks.get(name, "")
     qr, sr = parse_block(block)
-    q_num  = meta.get("number", "")
+    q_num  = to_int_id(meta.get("number", ""))
     diff   = meta.get("difficulty", "Intermediate")
     weight = compute_weight(diff, sr, qr)
 
@@ -136,7 +166,7 @@ for name, meta in quest_meta.items():
     # ── Edge list rows ────────────────────────────────────────────────────────
     for prereq in qr:
         prereq_lookup = prereq.removeprefix("Started:")
-        prereq_num = quest_meta.get(prereq_lookup, {}).get("number", "")
+        prereq_num = to_int_id(quest_meta.get(prereq_lookup, {}).get("number", ""))
         rows_link.append([
             prereq_num,   # from node ID
             prereq,       # from label
