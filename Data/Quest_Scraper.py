@@ -35,7 +35,7 @@ SKILL_ID = {
 # ── Parse Lua quest blocks ─────────────────────────────────────────────────────
 def extract_quest_blocks(text):
     blocks = []
-    pat = re.compile(r"\['(.+?)'\]\s*=\s*\{")
+    pat = re.compile(r"\['((?:[^'\\]|\\.)*)'\]\s*=\s*\{")
     i = 0
     while i < len(text):
         m = pat.search(text, i)
