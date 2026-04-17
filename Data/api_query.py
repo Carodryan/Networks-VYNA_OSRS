@@ -51,9 +51,10 @@ pages = data["query"]["pages"]
 page  = next(iter(pages.values()))
 content = page["revisions"][0]["slots"]["main"]["*"]
 
-# Strip the first 30 header lines (Lua boilerplate)
-lines   = content.splitlines()
-content = "\n".join(lines[30:])
+# Find the start of the actual Lua table, skipping any wiki header boilerplate
+lines = content.splitlines()
+start = next((i for i, l in enumerate(lines) if l.strip().startswith("local questReqs")), 0)
+content = "\n".join(lines[start:])
 
 # ── 3. Write combined output ───────────────────────────────────────────────────
 output = {

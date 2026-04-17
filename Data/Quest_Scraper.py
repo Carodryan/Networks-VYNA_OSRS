@@ -1,11 +1,8 @@
 import re, json, openpyxl
 
 # ── Load inputs ────────────────────────────────────────────────────────────────
-raw       = open("api_raw.txt").read()
+raw        = open("api_raw.txt").read()
 quest_meta = json.load(open("quest_meta.json"))          # name -> {number, difficulty}
-
-# Quests only (stop before miniquests section)
-quest_section = raw.split("-----------------------Insert Miniquests below here")[0]
 
 # ── Difficulty tier -> numeric score ──────────────────────────────────────────
 DIFFICULTY_SCORE = {
@@ -26,7 +23,7 @@ SKILL_ID = {
     "Ranged":       10,  "Thieving":   11,  "Cooking":    12,
     "Prayer":       13,  "Crafting":   14,  "Firemaking":  15,
     "Magic":        16,  "Fletching":  17,  "Woodcutting": 18,
-    "Runecraft":    18,  "Slayer":     19,  "Farming":     20,
+    "Runecraft":    26,  "Slayer":     19,  "Farming":     20,
     "Construction": 21,  "Hunter":     22,
     # Pseudo-skills
     "Quest point":  23,  "Kudos":      24,  "Combat":      25,
@@ -93,15 +90,19 @@ def compute_weight(difficulty, skill_reqs, quest_reqs):
     return round(d_score + sk_sum + sk_count + q_count, 2)
 
 # ── Build data ─────────────────────────────────────────────────────────────────
-blocks = extract_quest_blocks(quest_section)
+# Parse ALL Lua blocks across both sections; quest_meta is the authority on
+# which entries are real quests — miniquests/diaries are filtered out below.
+lua_blocks = dict(extract_quest_blocks(raw))   # name -> block_text
 
 rows_ref  = []   # reference table rows
 rows_link = []   # SAS edge-list rows
 rows_node = []   # node table (one row per quest)
 
-for name, block in blocks:
+# Iterate over quest_meta so every known quest becomes a node, even those
+# absent from the Lua module (they just have no prerequisites).
+for name, meta in quest_meta.items():
+    block = lua_blocks.get(name, "")
     qr, sr = parse_block(block)
-    meta   = quest_meta.get(name, {})
     q_num  = meta.get("number", "")
     diff   = meta.get("difficulty", "Intermediate")
     weight = compute_weight(diff, sr, qr)
@@ -134,7 +135,8 @@ for name, block in blocks:
 
     # ── Edge list rows ────────────────────────────────────────────────────────
     for prereq in qr:
-        prereq_num = quest_meta.get(prereq, {}).get("number", "")
+        prereq_lookup = prereq.removeprefix("Started:")
+        prereq_num = quest_meta.get(prereq_lookup, {}).get("number", "")
         rows_link.append([
             prereq_num,   # from node ID
             prereq,       # from label
@@ -186,5 +188,5 @@ for ws in [ws1, ws2, ws3]:
 wb1.save("quest_reference.xlsx")
 wb2.save("quest_network_sas.xlsx")
 
-print(f"Done — {len(blocks)} quests, {len(rows_link)} directed edges")
+print(f"Done — {len(rows_node)} quests, {len(rows_link)} directed edges")
 print(f"Saved: quest_reference.xlsx  |  quest_network_sas.xlsx")
