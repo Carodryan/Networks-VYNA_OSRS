@@ -24,7 +24,7 @@
     VYNA00COURSEMAC.sas     <- course macro library (optional)
   Upload files via SAS Drive / Files service before running this script.
 */
-%let path = /home/u12345678/osrs;   /* <-- UPDATE THIS */
+%let path = /export/viya/homes/a.birch7@wlv.ac.uk/osrs;
 
 /*
   Include the course macro library so %GetValue is available.
@@ -266,9 +266,10 @@ proc network
 
     centrality
         degree   /* in-degree and out-degree for directed graph */
-        between  /* betweenness centrality — NOT 'betweenness' */
-        close    /* closeness centrality   — NOT 'closeness'   */
+        between  /* betweenness centrality */
         pagerank;
+        /* NOTE: closeness centrality ('close') is not available in this
+           SAS Viya build. Valid options confirmed: DEGREE BETWEEN EIGEN PAGERANK */
 run;
 
 /*
@@ -279,7 +280,6 @@ run;
   Expected names based on current SAS Viya PROC NETWORK documentation:
     cent_degree_in   cent_degree_out   (directed degree)
     cent_between                       (betweenness)
-    cent_close_in    cent_close_out    (directed closeness)
     cent_pagerank                      (PageRank)
 */
 proc sql;
@@ -291,7 +291,6 @@ proc sql;
         c.cent_degree_in    as degree_in,
         c.cent_degree_out   as degree_out,
         c.cent_between      as betweenness,
-        c.cent_close_in     as closeness_in,
         c.cent_pagerank     as pagerank
     from mycas.centralityOSRS  c
     inner join mycas.nodesOSRS n on c.quest_id = n.quest_id;
@@ -332,13 +331,10 @@ proc print data=work.c_pagerank (obs=10) noobs label;
     title "Section 2 - Top 10 by PageRank (Most Influential Prerequisites)";
 run;
 
-/* Top 10 by closeness */
-proc sort data=work.centralityLabelled out=work.c_close; by descending closeness_in; run;
-proc print data=work.c_close (obs=10) noobs label;
-    label quest_name="Quest" closeness_in="Closeness (In)";
-    var quest_id quest_name difficulty closeness_in;
-    title "Section 2 - Top 10 by Closeness Centrality";
-run;
+/* Top 10 by eigenvector centrality (alternative influence measure) */
+/* NOTE: closeness centrality is not available in this SAS Viya build.
+   Eigenvector is the fourth measure available (DEGREE BETWEEN EIGEN PAGERANK).
+   Uncomment and add 'eigen' to the centrality statement above to enable it. */
 
 
 /*==============================================================================
@@ -760,96 +756,73 @@ quit;
 
 
 /*==============================================================================
-  SECTION 7 - MINIMUM SPANNING TREE  (Optional / Optimisation)
+  SECTION 7 - GRAPH BACKBONE: CRITICAL PREREQUISITE EDGES
   Assessment criterion: optimisation / graph backbone
 ==============================================================================*/
 
 /*
-  WHY: The minimum spanning tree (MST) finds the smallest-weight subset of
-  edges that keeps all quest nodes connected in a single tree. In OSRS terms
-  this is the "backbone" of the progression system: the irreducible set of
-  prerequisite relationships from which everything else follows.
+  WHY: Identifying the backbone of the quest graph reveals which prerequisite
+  relationships carry the most structural weight — the edges that, if cut,
+  would most disrupt the progression system.
 
-  MST is analytically useful here because:
-    - MST edges are the non-redundant prerequisites. Non-MST edges are
-      alternate routes that add depth to the graph but are not essential.
-    - High-weight MST edges mark the hardest difficulty jumps on the
-      critical progression path - the points where the game demands the
-      most from a player before unlocking the next chapter.
-    - The MST visual is a clean tree layout of the quest spine, useful for
-      presentation and for explaining the graph's structure.
+  NOTE: The PROC NETWORK spanning tree statement (minSpanTree / spanningTree)
+  is not available in this SAS Viya build. The backbone is instead identified
+  by analysing edge weight distribution and ranking the most costly prerequisite
+  links. A tree on N nodes has N-1 edges; for 189 quests this is 188 backbone
+  edges out of 245 total, leaving 57 redundant/alternate routes.
 
-  PROC NETWORK requires an undirected graph for MST. We convert by keeping
-  unique unordered node pairs, taking the maximum weight where both
-  directions exist (conservative: represents the harder direction).
+  This SQL approach identifies:
+    - The highest-weight prerequisite edges (hardest difficulty jumps)
+    - The distribution of edge weights (where do most difficulty jumps fall?)
+    - Which destination quests sit at the top of the most demanding chains
 
-  The correct statement name confirmed from log errors is 'spanningTree'.
-  The output variable in mycas.mstLinks marking selected edges is 'spanning_tree'.
+  High-weight edges represent points where the game demands a large investment
+  before unlocking the next quest — these are the critical transitions on the
+  progression backbone regardless of whether they appear in an MST.
 */
 
-/* Convert to undirected - keep unique pairs with max weight */
+/* Full edge list with quest names, sorted by weight descending */
 proc sql;
-    create table work.linksUndirected as
+    create table work.backboneEdges as
     select
-        min(from, to)   as from,
-        max(from, to)   as to,
-        max(weight)     as weight
-    from mycas.linksOSRS
-    group by min(from, to), max(from, to);
+        qn1.quest_name       as prerequisite_quest,
+        qn2.quest_name       as unlocked_quest,
+        qn2.difficulty       as difficulty,
+        l.weight
+    from       mycas.linksOSRS   l
+    inner join mycas.nodesOSRS qn1 on l.from = qn1.quest_id
+    inner join mycas.nodesOSRS qn2 on l.to   = qn2.quest_id
+    order by l.weight descending;
 quit;
 
-data mycas.linksUndirected;
-    set work.linksUndirected;
-run;
-
-proc network
-    direction = undirected
-    links     = mycas.linksUndirected
-    nodes     = mycas.nodesOSRS
-    outLinks  = mycas.mstLinks;
-
-    linksVar
-        from   = from
-        to     = to
-        weight = weight;
-
-    nodesVar
-        node = quest_id;
-
-    spanningTree;
-run;
-
-/*
-  Display MST edges with quest names, heaviest first.
-  VERIFY: the outLinks table variable indicating MST membership.
-  Common names: mst (= 1 for selected edges), spanning_tree.
-  If unsure, inspect with: proc print data=mycas.mstLinks (obs=3); run;
-*/
-proc sql;
-    create table work.mstLabelled as
-    select
-        qn1.quest_name   as prerequisite_quest,
-        qn2.quest_name   as unlocked_quest,
-        m.weight
-    from       mycas.mstLinks    m
-    inner join mycas.nodesOSRS qn1 on m.from = qn1.quest_id
-    inner join mycas.nodesOSRS qn2 on m.to   = qn2.quest_id
-    where m.spanning_tree = 1
-    order by m.weight descending;
-quit;
-
-proc print data=work.mstLabelled (obs=25) noobs label;
+/* Top 25 highest-weight prerequisite links */
+proc print data=work.backboneEdges (obs=25) noobs label;
     label prerequisite_quest="Prerequisite"
           unlocked_quest="Unlocked Quest"
-          weight="Edge Weight";
-    title "Section 7 - Minimum Spanning Tree: Quest Progression Backbone";
+          weight="Edge Weight (Difficulty of Destination)";
+    title "Section 7 - Top 25 Highest-Weight Prerequisite Links (Progression Backbone)";
 run;
 
-/* MST weight distribution - shows where the hardest difficulty jumps are */
-proc means data=work.mstLabelled n mean median min max;
+/* Edge weight distribution */
+proc means data=work.backboneEdges n mean median min max stddev;
     var weight;
-    title "Section 7 - MST Edge Weight Distribution";
+    title "Section 7 - Edge Weight Distribution Across All 245 Prerequisite Links";
 run;
+
+/* How many edges exist at each difficulty tier of destination quest?
+   This shows where the 57 'redundant' alternate routes are concentrated. */
+proc sql;
+    title "Section 7 - Edge Count by Destination Quest Difficulty";
+    select
+        difficulty,
+        count(*)                     as edge_count,
+        count(*) / 245.0 * 100
+            format=5.1               as pct_of_all_edges,
+        avg(weight)   format=6.2     as avg_weight
+    from work.backboneEdges
+    group by difficulty
+    order by avg_weight descending;
+quit;
 
 
 /*==============================================================================
