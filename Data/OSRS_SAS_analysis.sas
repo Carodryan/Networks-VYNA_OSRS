@@ -272,15 +272,16 @@ proc network
            SAS Viya build. Valid options confirmed: DEGREE BETWEEN EIGEN PAGERANK */
 run;
 
+/* Diagnostic: print raw outNodes to confirm exact column names.
+   centralityOSRS has 6 variables: quest_id + 5 centrality columns.
+   This print runs regardless and shows what names this SAS Viya build uses. */
+proc print data=mycas.centralityOSRS (obs=3); run;
+
 /*
   Join centrality scores to quest names.
-  VERIFY the output variable names below against your outNodes table -
-  print mycas.centralityOSRS to inspect column names if needed.
-
-  Expected names based on current SAS Viya PROC NETWORK documentation:
-    cent_degree_in   cent_degree_out   (directed degree)
-    cent_between                       (betweenness)
-    cent_pagerank                      (PageRank)
+  Column names below assume no 'cent_' prefix (confirmed missing from error log).
+  For directed degree = weight, expected output columns: degree_in, degree_out
+  If these also fail, read the proc print above for the actual names.
 */
 proc sql;
     create table work.centralityLabelled as
@@ -288,16 +289,13 @@ proc sql;
         c.quest_id,
         n.quest_name,
         n.difficulty,
-        c.cent_degree_in    as degree_in,
-        c.cent_degree_out   as degree_out,
-        c.cent_between      as betweenness,
-        c.cent_pagerank     as pagerank
+        c.degree_in,
+        c.degree_out,
+        c.between      as betweenness,
+        c.pagerank
     from mycas.centralityOSRS  c
     inner join mycas.nodesOSRS n on c.quest_id = n.quest_id;
 quit;
-
-/* If the column names above do not exist, run this to see what is available: */
-/* proc print data=mycas.centralityOSRS (obs=3); run; */
 
 /* Top 10 by out-degree - gateway quests that unlock the most content */
 proc sort data=work.centralityLabelled out=work.c_outdeg; by descending degree_out; run;
@@ -656,11 +654,11 @@ proc sql;
     select
         node_id                 as skill_id,
         node_name               as skill_name,
-        cent_degree             as quests_requiring
-        /* VERIFY: variable name cent_degree */
+        degree                  as quests_requiring
+        /* column name matches degree = unweight option, no cent_ prefix */
     from mycas.bipartiteNodes
     where node_type = 1
-    order by cent_degree descending;
+    order by degree descending;
 quit;
 
 proc print data=work.skillDegree noobs label;
@@ -674,10 +672,10 @@ proc sql;
     select
         node_id                 as quest_id,
         node_name               as quest_name,
-        cent_degree             as distinct_skills_required
+        degree                  as distinct_skills_required
     from mycas.bipartiteNodes
-    where node_type = 0 and cent_degree > 0
-    order by cent_degree descending;
+    where node_type = 0 and degree > 0
+    order by degree descending;
 quit;
 
 proc print data=work.questSkillDegree (obs=15) noobs label;
