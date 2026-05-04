@@ -144,12 +144,16 @@ for name, meta in quest_meta.items():
     weight = compute_weight(diff, sr, qr)
 
     # ── Reference table row ───────────────────────────────────────────────────
-    skill_str = "; ".join(f"{sname} {lvl} (ID:{sid})" for sname, lvl, sid in sr)
+    # Machine-readable format: pipe-delimited, colon-separated fields
+    #   quest_reqs:  "Quest A|Quest B"
+    #   skill_reqs:  "SkillName:Level:SkillID|..."
+    quest_str = "|".join(qr)
+    skill_str = "|".join(f"{sname}:{lvl}:{sid}" for sname, lvl, sid in sr)
     rows_ref.append([
         q_num,
         name,
         diff,
-        "; ".join(qr),
+        quest_str,
         skill_str,
         len(qr),
         len(sr),
@@ -173,6 +177,8 @@ for name, meta in quest_meta.items():
     for prereq in qr:
         prereq_lookup = prereq.removeprefix("Started:")
         prereq_num = to_int_id(quest_meta.get(prereq_lookup, {}).get("number", ""))
+        if prereq_num == "":
+            continue  # prereq is a miniquest or unknown — no node ID, skip edge
         rows_link.append([
             prereq_num,   # from node ID
             prereq,       # from label
