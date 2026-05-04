@@ -60,6 +60,7 @@ run;
 
 data mycas.linksOSRS;
     set work.linksRaw;
+    where from_id is not missing and to_id is not missing;  /* drop miniquest rows */
     from = from_id;
     to   = to_id;
     /* weight = composite difficulty of the destination quest:
@@ -85,6 +86,7 @@ run;
 
 data mycas.linksBipartite;
     set work.skillLinksRaw;
+    where from_quest_id is not missing and to_skill_id is not missing;
     from   = from_quest_id;
     to     = to_skill_id;
     weight = min_level;
@@ -263,10 +265,10 @@ proc network
         node = quest_id;
 
     centrality
-        degree      /* in-degree and out-degree for directed graph */
-        betweenness /* betweenness on weighted shortest paths      */
-        closeness   /* closeness centrality                        */
-        pagerank;   /* VERIFY: keyword may be 'pageRank'           */
+        degree   /* in-degree and out-degree for directed graph */
+        between  /* betweenness centrality — NOT 'betweenness' */
+        close    /* closeness centrality   — NOT 'closeness'   */
+        pagerank;
 run;
 
 /*
@@ -470,16 +472,10 @@ proc network
     nodesVar
         node = quest_id;
 
-    communityDetection
+    community
         algorithm = louvain
         outLevel  = mycas.communityLevel;
-        /*
-          VERIFY: 'louvain' is the correct algorithm keyword.
-          Alternative: algorithm=label  (label propagation, faster but less stable).
-          outLevel stores the Louvain hierarchy - one row per node per resolution level.
-          The community variable in outNodes holds the final partition assignment.
-          VERIFY: output variable may be named 'community' or 'comm_id'.
-        */
+        /* output variable in mycas.communityOSRS is named 'community' */
 run;
 
 proc sql;
@@ -787,8 +783,8 @@ quit;
   unique unordered node pairs, taking the maximum weight where both
   directions exist (conservative: represents the harder direction).
 
-  VERIFY: the MST statement name. It may be 'minSpanTree' or 'spanningTree'.
-  Check the SAS Viya PROC NETWORK documentation for your release.
+  The correct statement name confirmed from log errors is 'spanningTree'.
+  The output variable in mycas.mstLinks marking selected edges is 'spanning_tree'.
 */
 
 /* Convert to undirected - keep unique pairs with max weight */
@@ -820,7 +816,7 @@ proc network
     nodesVar
         node = quest_id;
 
-    minSpanTree;   /* VERIFY: may be 'spanningTree' in your Viya version */
+    spanningTree;
 run;
 
 /*
@@ -838,7 +834,7 @@ proc sql;
     from       mycas.mstLinks    m
     inner join mycas.nodesOSRS qn1 on m.from = qn1.quest_id
     inner join mycas.nodesOSRS qn2 on m.to   = qn2.quest_id
-    where m.mst = 1    /* VERIFY: filter for MST-selected edges */
+    where m.spanning_tree = 1
     order by m.weight descending;
 quit;
 
@@ -888,7 +884,9 @@ proc freq data=mycas.nodesOSRS;
 run;
 
 /* Ten most demanding quests overall */
-proc sort data=mycas.nodesOSRS out=work.heaviest; by descending node_weight; run;
+/* Copy CAS table to WORK before sorting — PROC SORT direct from CAS returns 0 obs */
+data work.nodesLocal; set mycas.nodesOSRS; run;
+proc sort data=work.nodesLocal out=work.heaviest; by descending node_weight; run;
 proc print data=work.heaviest (obs=10) noobs label;
     label quest_name="Quest"  node_weight="Node Weight"  difficulty="Difficulty";
     var quest_id quest_name difficulty num_quest_prereqs num_skill_reqs node_weight;
