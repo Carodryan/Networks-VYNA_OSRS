@@ -36,20 +36,25 @@ DIFFICULTY_SCORE = {
     "Grandmaster":  5,
 }
 
-# ── Skill name -> numeric ID ──────────────────────────────────────────────────
-# Canonical OSRS skill list (23 skills) + special pseudo-skills
+# ── Skill name -> numeric ID (1–23, standard OSRS skill order) ────────────────
+# Pseudo-skills (Quest point, Kudos, Combat) are intentionally excluded:
+# they are not real trainable skills and should not appear as nodes in the
+# bipartite skill graph. Any skill requirement referencing them will be
+# silently skipped (sid == 0 check in the rows_skill loop below).
 SKILL_ID = {
-    "Attack":        1,  "Hitpoints":   2,  "Mining":      3,
-    "Strength":      4,  "Agility":     5,  "Smithing":    6,
-    "Defence":       7,  "Herblore":    8,  "Fishing":     9,
-    "Ranged":       10,  "Thieving":   11,  "Cooking":    12,
-    "Prayer":       13,  "Crafting":   14,  "Firemaking":  15,
-    "Magic":        16,  "Fletching":  17,  "Woodcutting": 18,
-    "Runecraft":    26,  "Slayer":     19,  "Farming":     20,
-    "Construction": 21,  "Hunter":     22,
-    # Pseudo-skills
-    "Quest point":  23,  "Kudos":      24,  "Combat":      25,
+    "Attack":        1,  "Strength":    2,  "Defence":     3,
+    "Hitpoints":     4,  "Ranged":      5,  "Prayer":      6,
+    "Magic":         7,  "Cooking":     8,  "Woodcutting": 9,
+    "Fletching":    10,  "Fishing":    11,  "Firemaking":  12,
+    "Crafting":     13,  "Smithing":   14,  "Mining":      15,
+    "Herblore":     16,  "Agility":    17,  "Thieving":    18,
+    "Slayer":       19,  "Farming":    20,  "Construction":21,
+    "Hunter":       22,  "Runecraft":  23,
 }
+
+# SAS bipartite offset: skill node IDs in SAS = SKILL_ID value + SKILL_OFFSET
+# This keeps skill nodes (1001–1023) separate from quest nodes (0–188).
+SKILL_OFFSET = 1000
 
 # ── Parse Lua quest blocks ─────────────────────────────────────────────────────
 def extract_quest_blocks(text):
@@ -116,9 +121,10 @@ def compute_weight(difficulty, skill_reqs, quest_reqs):
 # which entries are real quests — miniquests/diaries are filtered out below.
 lua_blocks = dict(extract_quest_blocks(raw))   # name -> block_text
 
-rows_ref  = []   # reference table rows
-rows_link = []   # SAS edge-list rows
-rows_node = []   # node table (one row per quest)
+rows_ref   = []  # reference table rows
+rows_link  = []  # SAS edge-list rows
+rows_node  = []  # node table (one row per quest)
+rows_skill = []  # bipartite skill-edge rows (quest_id -> skill node)
 
 # Warn about quests that have no entry in the Lua requirements module.
 no_lua_data = [n for n in quest_meta if n not in lua_blocks]
@@ -175,6 +181,18 @@ for name, meta in quest_meta.items():
             weight,       # edge weight (difficulty of destination quest)
         ])
 
+    # ── Skill-edge rows for bipartite graph ───────────────────────────────────
+    for sname, level, sid in sr:
+        if sid == 0:
+            continue  # skip unrecognised or pseudo-skills
+        rows_skill.append([
+            q_num,               # from: quest node ID
+            name,                # from: quest name (label)
+            sid + SKILL_OFFSET,  # to: skill node ID in SAS (e.g. 1015)
+            sname,               # to: skill name (label)
+            level,               # weight: minimum skill level required
+        ])
+
 # ── Write File 1 : Quest Reference ────────────────────────────────────────────
 wb1 = openpyxl.Workbook()
 ws1 = wb1.active
@@ -206,17 +224,24 @@ ws3.append(["from_id", "from_quest", "to_id", "to_quest", "weight"])
 for row in rows_link:
     ws3.append(row)
 
+# Third sheet: skill edges for bipartite analysis
+ws4 = wb2.create_sheet("Skill Links")
+ws4.append(["from_quest_id", "from_quest", "to_skill_id", "to_skill", "min_level"])
+for row in rows_skill:
+    ws4.append(row)
+
 # Auto-fit columns
 def autofit(ws):
     for col in ws.columns:
         w = max((len(str(c.value or "")) for c in col), default=8)
         ws.column_dimensions[col[0].column_letter].width = min(w + 2, 80)
 
-for ws in [ws1, ws2, ws3]:
+for ws in [ws1, ws2, ws3, ws4]:
     autofit(ws)
 
 wb1.save("quest_reference.xlsx")
 wb2.save("quest_network_sas.xlsx")
 
-print(f"Done — {len(rows_node)} quests, {len(rows_link)} directed edges")
+print(f"Done — {len(rows_node)} quests, {len(rows_link)} quest edges, "
+      f"{len(rows_skill)} skill edges")
 print(f"Saved: quest_reference.xlsx  |  quest_network_sas.xlsx")
