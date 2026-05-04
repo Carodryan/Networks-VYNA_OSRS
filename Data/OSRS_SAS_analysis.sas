@@ -265,8 +265,8 @@ proc network
         node = quest_id;
 
     centrality
-        degree   /* in-degree and out-degree for directed graph */
-        between  /* betweenness centrality */
+        degree
+        between = weight   /* betweenness — requires = WEIGHT or = UNWEIGHT */
         pagerank;
         /* NOTE: closeness centrality ('close') is not available in this
            SAS Viya build. Valid options confirmed: DEGREE BETWEEN EIGEN PAGERANK */
