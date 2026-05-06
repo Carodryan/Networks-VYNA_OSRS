@@ -1,0 +1,758 @@
+{
+  "The Ides of Milk": {
+    "number": "178",
+    "difficulty": "Novice"
+  },
+  "Learning the Ropes": {
+    "number": "0",
+    "difficulty": "Novice"
+  },
+  "Below Ice Mountain": {
+    "number": "148",
+    "difficulty": "Novice"
+  },
+  "X Marks the Spot": {
+    "number": "142",
+    "difficulty": "Novice"
+  },
+  "The Corsair Curse": {
+    "number": "135",
+    "difficulty": "Intermediate"
+  },
+  "Misthalin Mystery": {
+    "number": "129",
+    "difficulty": "Novice"
+  },
+  "Rune Mysteries": {
+    "number": "51",
+    "difficulty": "Novice"
+  },
+  "Dragon Slayer I": {
+    "number": "17",
+    "difficulty": "Experienced"
+  },
+  "Pirate's Treasure": {
+    "number": "16",
+    "difficulty": "Novice"
+  },
+  "Goblin Diplomacy": {
+    "number": "15",
+    "difficulty": "Novice"
+  },
+  "The Knight's Sword": {
+    "number": "14",
+    "difficulty": "Intermediate"
+  },
+  "Witch's Potion": {
+    "number": "13",
+    "difficulty": "Novice"
+  },
+  "Black Knights' Fortress": {
+    "number": "12",
+    "difficulty": "Intermediate"
+  },
+  "Doric's Quest": {
+    "number": "11",
+    "difficulty": "Novice"
+  },
+  "Prince Ali Rescue": {
+    "number": "10",
+    "difficulty": "Novice"
+  },
+  "Imp Catcher": {
+    "number": "9",
+    "difficulty": "Novice"
+  },
+  "Vampyre Slayer": {
+    "number": "8",
+    "difficulty": "Intermediate"
+  },
+  "Ernest the Chicken": {
+    "number": "7",
+    "difficulty": "Novice"
+  },
+  "The Restless Ghost": {
+    "number": "3",
+    "difficulty": "Novice"
+  },
+  "Sheep Shearer": {
+    "number": "5",
+    "difficulty": "Novice"
+  },
+  "Shield of Arrav": {
+    "number": "6",
+    "difficulty": "Novice"
+  },
+  "Demon Slayer": {
+    "number": "2",
+    "difficulty": "Novice"
+  },
+  "Romeo & Juliet": {
+    "number": "4",
+    "difficulty": "Novice"
+  },
+  "Cook's Assistant": {
+    "number": "1",
+    "difficulty": "Novice"
+  },
+  "Druidic Ritual": {
+    "number": "18",
+    "difficulty": "Novice"
+  },
+  "Lost City": {
+    "number": "19",
+    "difficulty": "Intermediate"
+  },
+  "Witch's House": {
+    "number": "20",
+    "difficulty": "Intermediate"
+  },
+  "Merlin's Crystal": {
+    "number": "21",
+    "difficulty": "Intermediate"
+  },
+  "Heroes' Quest": {
+    "number": "22",
+    "difficulty": "Experienced"
+  },
+  "Scorpion Catcher": {
+    "number": "23",
+    "difficulty": "Intermediate"
+  },
+  "Family Crest": {
+    "number": "24",
+    "difficulty": "Experienced"
+  },
+  "Fishing Contest": {
+    "number": "26",
+    "difficulty": "Novice"
+  },
+  "Tribal Totem": {
+    "number": "25",
+    "difficulty": "Intermediate"
+  },
+  "Monk's Friend": {
+    "number": "27",
+    "difficulty": "Novice"
+  },
+  "Temple of Ikov": {
+    "number": "28",
+    "difficulty": "Intermediate"
+  },
+  "Clock Tower": {
+    "number": "29",
+    "difficulty": "Novice"
+  },
+  "Holy Grail": {
+    "number": "30",
+    "difficulty": "Intermediate"
+  },
+  "Tree Gnome Village": {
+    "number": "31",
+    "difficulty": "Intermediate"
+  },
+  "Fight Arena": {
+    "number": "32",
+    "difficulty": "Intermediate"
+  },
+  "Hazeel Cult": {
+    "number": "33",
+    "difficulty": "Novice"
+  },
+  "Sheep Herder": {
+    "number": "34",
+    "difficulty": "Novice"
+  },
+  "Plague City": {
+    "number": "35",
+    "difficulty": "Novice"
+  },
+  "Sea Slug": {
+    "number": "36",
+    "difficulty": "Intermediate"
+  },
+  "Waterfall Quest": {
+    "number": "37",
+    "difficulty": "Intermediate"
+  },
+  "Jungle Potion": {
+    "number": "39",
+    "difficulty": "Novice"
+  },
+  "The Grand Tree": {
+    "number": "40",
+    "difficulty": "Intermediate"
+  },
+  "Underground Pass": {
+    "number": "42",
+    "difficulty": "Experienced"
+  },
+  "Observatory Quest": {
+    "number": "43",
+    "difficulty": "Intermediate"
+  },
+  "The Tourist Trap": {
+    "number": "44",
+    "difficulty": "Intermediate"
+  },
+  "Watchtower": {
+    "number": "45",
+    "difficulty": "Intermediate"
+  },
+  "Dwarf Cannon": {
+    "number": "46",
+    "difficulty": "Novice"
+  },
+  "Murder Mystery": {
+    "number": "47",
+    "difficulty": "Novice"
+  },
+  "The Dig Site": {
+    "number": "48",
+    "difficulty": "Intermediate"
+  },
+  "Gertrude's Cat": {
+    "number": "49",
+    "difficulty": "Novice"
+  },
+  "Legends' Quest": {
+    "number": "50",
+    "difficulty": "Master"
+  },
+  "Death Plateau": {
+    "number": "56",
+    "difficulty": "Novice"
+  },
+  "Eadgar's Ruse": {
+    "number": "60",
+    "difficulty": "Intermediate"
+  },
+  "Big Chompy Bird Hunting": {
+    "number": "52",
+    "difficulty": "Intermediate"
+  },
+  "Elemental Workshop I": {
+    "number": "53",
+    "difficulty": "Novice"
+  },
+  "Nature Spirit": {
+    "number": "55",
+    "difficulty": "Intermediate"
+  },
+  "Priest in Peril": {
+    "number": "54",
+    "difficulty": "Novice"
+  },
+  "Regicide": {
+    "number": "59",
+    "difficulty": "Experienced"
+  },
+  "Tai Bwo Wannai Trio": {
+    "number": "58",
+    "difficulty": "Intermediate"
+  },
+  "Troll Stronghold": {
+    "number": "57",
+    "difficulty": "Intermediate"
+  },
+  "Shades of Mort'ton": {
+    "number": "61",
+    "difficulty": "Intermediate"
+  },
+  "The Fremennik Trials": {
+    "number": "62",
+    "difficulty": "Intermediate"
+  },
+  "Horror from the Deep": {
+    "number": "63",
+    "difficulty": "Intermediate"
+  },
+  "Throne of Miscellania": {
+    "number": "64",
+    "difficulty": "Experienced"
+  },
+  "Monkey Madness I": {
+    "number": "65",
+    "difficulty": "Master"
+  },
+  "Haunted Mine": {
+    "number": "66",
+    "difficulty": "Experienced"
+  },
+  "Troll Romance": {
+    "number": "67",
+    "difficulty": "Intermediate"
+  },
+  "In Search of the Myreque": {
+    "number": "68",
+    "difficulty": "Intermediate"
+  },
+  "Creature of Fenkenstrain": {
+    "number": "69",
+    "difficulty": "Intermediate"
+  },
+  "Roving Elves": {
+    "number": "70",
+    "difficulty": "Experienced"
+  },
+  "Ghosts Ahoy": {
+    "number": "71",
+    "difficulty": "Intermediate"
+  },
+  "One Small Favour": {
+    "number": "72",
+    "difficulty": "Experienced"
+  },
+  "Mountain Daughter": {
+    "number": "73",
+    "difficulty": "Intermediate"
+  },
+  "Between a Rock...": {
+    "number": "74",
+    "difficulty": "Experienced"
+  },
+  "The Feud": {
+    "number": "75",
+    "difficulty": "Intermediate"
+  },
+  "The Golem": {
+    "number": "76",
+    "difficulty": "Intermediate"
+  },
+  "Desert Treasure I": {
+    "number": "77",
+    "difficulty": "Master"
+  },
+  "Icthlarin's Little Helper": {
+    "number": "78",
+    "difficulty": "Intermediate"
+  },
+  "Tears of Guthix": {
+    "number": "79",
+    "difficulty": "Intermediate"
+  },
+  "The Lost Tribe": {
+    "number": "81",
+    "difficulty": "Intermediate"
+  },
+  "The Giant Dwarf": {
+    "number": "82",
+    "difficulty": "Intermediate"
+  },
+  "Recruitment Drive": {
+    "number": "83",
+    "difficulty": "Novice"
+  },
+  "Mourning's End Part I": {
+    "number": "84",
+    "difficulty": "Master"
+  },
+  "Forgettable Tale...": {
+    "number": "85",
+    "difficulty": "Intermediate"
+  },
+  "Garden of Tranquillity": {
+    "number": "86",
+    "difficulty": "Intermediate"
+  },
+  "A Tail of Two Cats": {
+    "number": "87",
+    "difficulty": "Intermediate"
+  },
+  "Wanted!": {
+    "number": "88",
+    "difficulty": "Intermediate"
+  },
+  "Mourning's End Part II": {
+    "number": "89",
+    "difficulty": "Master"
+  },
+  "Rum Deal": {
+    "number": "90",
+    "difficulty": "Experienced"
+  },
+  "Shadow of the Storm": {
+    "number": "91",
+    "difficulty": "Intermediate"
+  },
+  "Making History": {
+    "number": "92",
+    "difficulty": "Intermediate"
+  },
+  "Ratcatchers": {
+    "number": "93",
+    "difficulty": "Intermediate"
+  },
+  "Spirits of the Elid": {
+    "number": "94",
+    "difficulty": "Intermediate"
+  },
+  "Devious Minds": {
+    "number": "95",
+    "difficulty": "Experienced"
+  },
+  "The Hand in the Sand": {
+    "number": "96",
+    "difficulty": "Intermediate"
+  },
+  "Enakhra's Lament": {
+    "number": "97",
+    "difficulty": "Experienced"
+  },
+  "Cabin Fever": {
+    "number": "98",
+    "difficulty": "Experienced"
+  },
+  "Fairytale I - Growing Pains": {
+    "number": "99",
+    "difficulty": "Intermediate"
+  },
+  "Recipe for Disaster": {
+    "number": "100",
+    "difficulty": "Special"
+  },
+  "In Aid of the Myreque": {
+    "number": "101",
+    "difficulty": "Intermediate"
+  },
+  "A Soul's Bane": {
+    "number": "102",
+    "difficulty": "Intermediate"
+  },
+  "Rag and Bone Man I": {
+    "number": "103",
+    "difficulty": "Novice"
+  },
+  "Swan Song": {
+    "number": "104",
+    "difficulty": "Master"
+  },
+  "Royal Trouble": {
+    "number": "105",
+    "difficulty": "Experienced"
+  },
+  "Death to the Dorgeshuun": {
+    "number": "106",
+    "difficulty": "Intermediate"
+  },
+  "Fairytale II - Cure a Queen": {
+    "number": "107",
+    "difficulty": "Experienced"
+  },
+  "Lunar Diplomacy": {
+    "number": "108",
+    "difficulty": "Experienced"
+  },
+  "The Eyes of Glouphrie": {
+    "number": "109",
+    "difficulty": "Intermediate"
+  },
+  "Darkness of Hallowvale": {
+    "number": "110",
+    "difficulty": "Experienced"
+  },
+  "The Slug Menace": {
+    "number": "111",
+    "difficulty": "Intermediate"
+  },
+  "Elemental Workshop II": {
+    "number": "112",
+    "difficulty": "Intermediate"
+  },
+  "My Arm's Big Adventure": {
+    "number": "113",
+    "difficulty": "Experienced"
+  },
+  "Enlightened Journey": {
+    "number": "114",
+    "difficulty": "Intermediate"
+  },
+  "Eagles' Peak": {
+    "number": "115",
+    "difficulty": "Novice"
+  },
+  "Animal Magnetism": {
+    "number": "116",
+    "difficulty": "Intermediate"
+  },
+  "Contact!": {
+    "number": "117",
+    "difficulty": "Experienced"
+  },
+  "Cold War": {
+    "number": "118",
+    "difficulty": "Intermediate"
+  },
+  "The Fremennik Isles": {
+    "number": "119",
+    "difficulty": "Experienced"
+  },
+  "The Great Brain Robbery": {
+    "number": "121",
+    "difficulty": "Experienced"
+  },
+  "What Lies Below": {
+    "number": "122",
+    "difficulty": "Intermediate"
+  },
+  "Olaf's Quest": {
+    "number": "123",
+    "difficulty": "Intermediate"
+  },
+  "Another Slice of H.A.M.": {
+    "number": "124",
+    "difficulty": "Intermediate"
+  },
+  "Dream Mentor": {
+    "number": "125",
+    "difficulty": "Master"
+  },
+  "Grim Tales": {
+    "number": "126",
+    "difficulty": "Master"
+  },
+  "King's Ransom": {
+    "number": "127",
+    "difficulty": "Experienced"
+  },
+  "Shilo Village": {
+    "number": "41",
+    "difficulty": "Intermediate"
+  },
+  "Biohazard": {
+    "number": "38",
+    "difficulty": "Novice"
+  },
+  "Tower of Life": {
+    "number": "120",
+    "difficulty": "Novice"
+  },
+  "Rag and Bone Man II": {
+    "number": "131",
+    "difficulty": "Experienced"
+  },
+  "Land of the Goblins": {
+    "number": "151",
+    "difficulty": "Experienced"
+  },
+  "While Guthix Sleeps": {
+    "number": "165",
+    "difficulty": "Grandmaster"
+  },
+  "Zogre Flesh Eaters": {
+    "number": "80",
+    "difficulty": "Intermediate"
+  },
+  "Monkey Madness II": {
+    "number": "128",
+    "difficulty": "Grandmaster"
+  },
+  "Client of Kourend": {
+    "number": "130",
+    "difficulty": "Novice"
+  },
+  "The Queen of Thieves": {
+    "number": "133",
+    "difficulty": "Intermediate"
+  },
+  "Bone Voyage": {
+    "number": "132",
+    "difficulty": "Intermediate"
+  },
+  "Dragon Slayer II": {
+    "number": "136",
+    "difficulty": "Grandmaster"
+  },
+  "The Depths of Despair": {
+    "number": "134",
+    "difficulty": "Intermediate"
+  },
+  "Recipe for Disaster/Another Cook's Quest": {
+    "number": "100.1",
+    "difficulty": "Special"
+  },
+  "Recipe for Disaster/Freeing the Goblin generals": {
+    "number": "100.3",
+    "difficulty": "Special"
+  },
+  "Recipe for Disaster/Freeing the Mountain Dwarf": {
+    "number": "100.2",
+    "difficulty": "Special"
+  },
+  "Recipe for Disaster/Freeing Evil Dave": {
+    "number": "100.6",
+    "difficulty": "Special"
+  },
+  "Recipe for Disaster/Freeing Pirate Pete": {
+    "number": "100.4",
+    "difficulty": "Special"
+  },
+  "Recipe for Disaster/Freeing the Lumbridge Guide": {
+    "number": "100.5",
+    "difficulty": "Special"
+  },
+  "Recipe for Disaster/Freeing Sir Amik Varze": {
+    "number": "100.8",
+    "difficulty": "Special"
+  },
+  "Recipe for Disaster/Freeing King Awowogei": {
+    "number": "100.7",
+    "difficulty": "Special"
+  },
+  "Recipe for Disaster/Freeing Skrach Uglogwee": {
+    "number": "100.9",
+    "difficulty": "Special"
+  },
+  "A Taste of Hope": {
+    "number": "138",
+    "difficulty": "Experienced"
+  },
+  "Tale of the Righteous": {
+    "number": "137",
+    "difficulty": "Intermediate"
+  },
+  "Making Friends with My Arm": {
+    "number": "139",
+    "difficulty": "Master"
+  },
+  "Recipe for Disaster/Defeating the Culinaromancer": {
+    "number": "100.10",
+    "difficulty": "Special"
+  },
+  "Song of the Elves": {
+    "number": "143",
+    "difficulty": "Grandmaster"
+  },
+  "The Ascent of Arceuus": {
+    "number": "141",
+    "difficulty": "Intermediate"
+  },
+  "The Forsaken Tower": {
+    "number": "140",
+    "difficulty": "Intermediate"
+  },
+  "The Fremennik Exiles": {
+    "number": "144",
+    "difficulty": "Master"
+  },
+  "The Curse of Arrav": {
+    "number": "170",
+    "difficulty": "Master"
+  },
+  "Defender of Varrock": {
+    "number": "160",
+    "difficulty": "Experienced"
+  },
+  "Sins of the Father": {
+    "number": "145",
+    "difficulty": "Master"
+  },
+  "A Kingdom Divided": {
+    "number": "150",
+    "difficulty": "Experienced"
+  },
+  "A Porcine of Interest": {
+    "number": "146",
+    "difficulty": "Novice"
+  },
+  "Getting Ahead": {
+    "number": "147",
+    "difficulty": "Intermediate"
+  },
+  "A Night at the Theatre": {
+    "number": "149",
+    "difficulty": "Master"
+  },
+  "Beneath Cursed Sands": {
+    "number": "153",
+    "difficulty": "Master"
+  },
+  "Temple of the Eye": {
+    "number": "152",
+    "difficulty": "Intermediate"
+  },
+  "The Path of Glouphrie": {
+    "number": "158",
+    "difficulty": "Experienced"
+  },
+  "Sleeping Giants": {
+    "number": "154",
+    "difficulty": "Intermediate"
+  },
+  "The Garden of Death": {
+    "number": "155",
+    "difficulty": "Intermediate"
+  },
+  "Desert Treasure II - The Fallen Empire": {
+    "number": "157",
+    "difficulty": "Grandmaster"
+  },
+  "Secrets of the North": {
+    "number": "156",
+    "difficulty": "Master"
+  },
+  "Children of the Sun": {
+    "number": "159",
+    "difficulty": "Novice"
+  },
+  "Perilous Moons": {
+    "number": "163",
+    "difficulty": "Master"
+  },
+  "The Ribbiting Tale of a Lily Pad Labour Dispute": {
+    "number": "164",
+    "difficulty": "Novice"
+  },
+  "Twilight's Promise": {
+    "number": "161",
+    "difficulty": "Intermediate"
+  },
+  "At First Light": {
+    "number": "162",
+    "difficulty": "Intermediate"
+  },
+  "The Heart of Darkness": {
+    "number": "166",
+    "difficulty": "Experienced"
+  },
+  "Death on the Isle": {
+    "number": "167",
+    "difficulty": "Intermediate"
+  },
+  "Meat and Greet": {
+    "number": "168",
+    "difficulty": "Experienced"
+  },
+  "Ethically Acquired Antiquities": {
+    "number": "169",
+    "difficulty": "Novice"
+  },
+  "The Final Dawn": {
+    "number": "171",
+    "difficulty": "Master"
+  },
+  "Pandemonium": {
+    "number": "174",
+    "difficulty": "Novice"
+  },
+  "Prying Times": {
+    "number": "175",
+    "difficulty": "Intermediate"
+  },
+  "Current Affairs": {
+    "number": "176",
+    "difficulty": "Novice"
+  },
+  "Troubled Tortugans": {
+    "number": "177",
+    "difficulty": "Experienced"
+  },
+  "Shadows of Custodia": {
+    "number": "172",
+    "difficulty": "Experienced"
+  },
+  "Scrambled!": {
+    "number": "173",
+    "difficulty": "Intermediate"
+  }
+}
