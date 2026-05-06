@@ -24,7 +24,7 @@
     VYNA00COURSEMAC.sas     <- course macro library (optional)
   Upload files via SAS Drive / Files service before running this script.
 */
-%let path = /home/u12345678/osrs;   /* <-- UPDATE THIS */
+%let path = /export/viya/homes/a.birch7@wlv.ac.uk/osrs;
 
 /*
   Include the course macro library so %GetValue is available.
@@ -40,6 +40,9 @@
     mycas.linksOSRS  - partial edge subset   (INCOMPLETE - replaced below)
   We overwrite linksOSRS immediately after with the full 245-edge dataset.
 */
+/* Terminate any leftover CAS session from a prior run before the include
+   opens a fresh one. Produces a harmless warning if MYSESS doesn't exist. */
+cas mysess terminate;
 %include "&path./OSRS_SAS_code.sas";
 
 /* -----------------------------------------------------------------------
@@ -265,40 +268,28 @@ proc network
         node = quest_id;
 
     centrality
-        degree   /* in-degree and out-degree for directed graph */
-        between  /* betweenness centrality — NOT 'betweenness' */
-        close    /* closeness centrality   — NOT 'closeness'   */
-        pagerank;
+        degree   = weight
+        between  = weight
+        pagerank = weight;
+        /* close (closeness) is not available in this SAS Viya build.
+           Confirmed available: degree, between, pagerank, eigen. */
 run;
 
-/*
-  Join centrality scores to quest names.
-  VERIFY the output variable names below against your outNodes table -
-  print mycas.centralityOSRS to inspect column names if needed.
-
-  Expected names based on current SAS Viya PROC NETWORK documentation:
-    cent_degree_in   cent_degree_out   (directed degree)
-    cent_between                       (betweenness)
-    cent_close_in    cent_close_out    (directed closeness)
-    cent_pagerank                      (PageRank)
-*/
+/* Output column names confirmed from SAS Viya 2025.09:
+     centr_degree_in_wt, centr_degree_out_wt, centr_between_wt, centr_pagerank_wt */
 proc sql;
     create table work.centralityLabelled as
     select
         c.quest_id,
         n.quest_name,
         n.difficulty,
-        c.cent_degree_in    as degree_in,
-        c.cent_degree_out   as degree_out,
-        c.cent_between      as betweenness,
-        c.cent_close_in     as closeness_in,
-        c.cent_pagerank     as pagerank
+        c.centr_degree_in_wt   as degree_in,
+        c.centr_degree_out_wt  as degree_out,
+        c.centr_between_wt     as betweenness,
+        c.centr_pagerank_wt    as pagerank
     from mycas.centralityOSRS  c
     inner join mycas.nodesOSRS n on c.quest_id = n.quest_id;
 quit;
-
-/* If the column names above do not exist, run this to see what is available: */
-/* proc print data=mycas.centralityOSRS (obs=3); run; */
 
 /* Top 10 by out-degree - gateway quests that unlock the most content */
 proc sort data=work.centralityLabelled out=work.c_outdeg; by descending degree_out; run;
@@ -330,14 +321,6 @@ proc print data=work.c_pagerank (obs=10) noobs label;
     label quest_name="Quest" pagerank="PageRank";
     var quest_id quest_name difficulty pagerank;
     title "Section 2 - Top 10 by PageRank (Most Influential Prerequisites)";
-run;
-
-/* Top 10 by closeness */
-proc sort data=work.centralityLabelled out=work.c_close; by descending closeness_in; run;
-proc print data=work.c_close (obs=10) noobs label;
-    label quest_name="Quest" closeness_in="Closeness (In)";
-    var quest_id quest_name difficulty closeness_in;
-    title "Section 2 - Top 10 by Closeness Centrality";
 run;
 
 
@@ -383,7 +366,7 @@ proc network
         node = quest_id;
 
     connectedComponents;
-    biConnectedComponents;
+    /* biConnectedComponents is not a valid PROC NETWORK statement; use PROC OPTNETWORK below */
 run;
 
 %put === SECTION 3 - Component Results ===;
@@ -391,7 +374,6 @@ run;
 /*
   With course macros:
     %put Connected components  : %GetValue(mac=_NETWORK_, item=NUM_COMPONENTS);
-    %put Biconnected components: %GetValue(mac=_NETWORK_, item=NUM_BICOMPONENTS);
     %put Articulation points   : %GetValue(mac=_NETWORK_, item=NUM_ARTICULATION_POINTS);
   VERIFY: confirm item names above.
 */
@@ -403,7 +385,7 @@ proc sql;
         c.quest_id,
         n.quest_name,
         n.difficulty,
-        c.concomp   /* connected component ID; VERIFY variable name */
+        c.concomp
     from mycas.componentsOSRS  c
     inner join mycas.nodesOSRS n on c.quest_id = n.quest_id
     order by c.concomp, n.quest_name;
@@ -414,23 +396,39 @@ proc freq data=work.compLabelled;
     title "Section 3 - Quest Count per Connected Component";
 run;
 
+/* --- 3b: Biconnected components and articulation points (PROC OPTNETWORK) - */
+/*
+  biConnectedComponents requires PROC OPTNETWORK, not PROC NETWORK.
+  Output: outNodes contains artpoint=1 for articulation point nodes,
+          joined on 'node' (not quest_id).
+*/
+proc optnetwork
+    links    = mycas.linksOSRS
+    outNodes = mycas.artPointsOSRS;
+
+    linksVar
+        from = from
+        to   = to;
+
+    biconnectedComponents;
+run;
+
 /*
   Articulation points: quests whose removal disconnects the graph.
   Sorted by node_weight descending so the most demanding chokepoints
   appear first - these are the best candidates for scenario analysis.
-  VERIFY: biConnectedComponents writes artpoint=1 for articulation nodes.
 */
 proc sql;
     create table work.artPoints as
     select
-        c.quest_id,
+        a.node           as quest_id,
         n.quest_name,
         n.difficulty,
         n.num_quest_prereqs,
         n.node_weight
-    from mycas.componentsOSRS  c
-    inner join mycas.nodesOSRS n on c.quest_id = n.quest_id
-    where c.artpoint = 1
+    from mycas.artPointsOSRS  a
+    inner join mycas.nodesOSRS n on a.node = n.quest_id
+    where a.artpoint = 1
     order by n.node_weight descending;
 quit;
 
@@ -473,9 +471,10 @@ proc network
         node = quest_id;
 
     community
-        algorithm = louvain
-        outLevel  = mycas.communityLevel;
-        /* output variable in mycas.communityOSRS is named 'community' */
+        resolutionList = 1.0
+        outLevel       = mycas.communityLevel;
+        /* output column in mycas.communityOSRS is 'community_1' (first resolution level).
+           'algorithm = louvain' is not a valid option in this SAS Viya build. */
 run;
 
 proc sql;
@@ -484,35 +483,35 @@ proc sql;
         c.quest_id,
         n.quest_name,
         n.difficulty,
-        c.community   /* VERIFY: variable name */
+        c.community_1
     from mycas.communityOSRS  c
     inner join mycas.nodesOSRS n on c.quest_id = n.quest_id
-    order by c.community, n.difficulty, n.quest_name;
+    order by c.community_1, n.difficulty, n.quest_name;
 quit;
 
 /* How many quests per community? */
 proc freq data=work.communityLabelled;
-    tables community / nocum;
-    title "Section 4 - Quests per Community (Louvain Algorithm)";
+    tables community_1 / nocum;
+    title "Section 4 - Quests per Community (Louvain / Resolution 1.0)";
 run;
 
 /* Community size summary with percentage */
 proc sql;
     title "Section 4 - Community Size Summary";
     select
-        community,
+        community_1,
         count(*)                      as size,
         count(*) / 189.0 * 100
             format=5.1                as pct_of_all_quests
     from work.communityLabelled
-    group by community
+    group by community_1
     order by size descending;
 quit;
 
 /* Full listing so we can examine which quests cluster together */
 proc print data=work.communityLabelled noobs label;
-    label quest_name="Quest"  community="Community ID";
-    var community quest_id quest_name difficulty;
+    label quest_name="Quest"  community_1="Community ID";
+    var community_1 quest_id quest_name difficulty;
     title "Section 4 - Full Community Assignment Listing";
 run;
 
@@ -546,8 +545,7 @@ run;
 proc network
     direction = directed
     links     = mycas.linksOSRS
-    nodes     = mycas.nodesOSRS
-    outNodes  = mycas.spOSRS;
+    nodes     = mycas.nodesOSRS;
 
     linksVar
         from   = from
@@ -558,31 +556,24 @@ proc network
         node = quest_id;
 
     shortestPath
-        source        = 18
-        outPathsLinks = mycas.spLinksOSRS;
-        /*
-          VERIFY: 'outPathsLinks' stores one row per edge on each discovered path.
-          The source= option computes single-source shortest paths to all nodes.
-          Confirm parameter name against your SAS Viya PROC NETWORK documentation.
-        */
+        source     = 18
+        outWeights = mycas.spWeightsOSRS
+        outPaths   = mycas.spPathsOSRS;
+        /* outWeights: one row per reachable node — sink (node ID) + path_weight.
+           outPaths:   one row per edge on each discovered path. */
 run;
 
 proc sql;
     create table work.spLabelled as
     select
-        s.quest_id,
+        s.sink         as quest_id,
         n.quest_name,
         n.difficulty,
-        s.sppathlen   as path_length   /* VERIFY: weighted path length variable */
-    from mycas.spOSRS     s
-    inner join mycas.nodesOSRS n on s.quest_id = n.quest_id
-    where s.sppathlen is not null
-    order by s.sppathlen descending;
-    /*
-      If the variable is not named sppathlen, inspect mycas.spOSRS:
-        proc print data=mycas.spOSRS (obs=5); run;
-      Common alternatives: spdist, sp_path_length.
-    */
+        s.path_weight  as path_length
+    from mycas.spWeightsOSRS  s
+    inner join mycas.nodesOSRS n on s.sink = n.quest_id
+    where s.path_weight is not null
+    order by s.path_weight descending;
 quit;
 
 /* Longest paths from Druidic Ritual - diameter candidates */
@@ -650,43 +641,54 @@ proc network
     nodesVar
         node = node_id;
 
-    centrality degree;
-    /* VERIFY: undirected degree output variable name is 'cent_degree' */
+    centrality degree = unweight;
+    /* outNodes (bipartiteNodes) gets: node_id + degree centrality column only.
+       node_name and node_type must be joined from nodesBipartite below. */
 run;
 
-/* Most-required skills (skill side of bipartite graph) */
-proc sql;
-    create table work.skillDegree as
-    select
-        node_id                 as skill_id,
-        node_name               as skill_name,
-        cent_degree             as quests_requiring
-        /* VERIFY: variable name cent_degree */
-    from mycas.bipartiteNodes
-    where node_type = 1
-    order by cent_degree descending;
-quit;
-
-proc print data=work.skillDegree noobs label;
-    label skill_name="Skill"  quests_requiring="Quests Requiring This Skill";
-    title "Section 6a - Most Required Skills (Bipartite Degree)";
+/* Diagnostic: reveal the actual column name produced by centrality degree = unweight */
+proc contents data=mycas.bipartiteNodes;
+    title "Section 6a DIAGNOSTIC - bipartiteNodes variable list";
+run;
+proc print data=mycas.bipartiteNodes (obs=3);
+    title "Section 6a DIAGNOSTIC - bipartiteNodes sample rows";
 run;
 
-/* Most skill-intensive quests (quest side of bipartite graph) */
+/* Pull all columns from bipartiteNodes into a work table — avoids hardcoding the
+   degree column name, which varies by SAS Viya build. The diagnostic proc contents
+   above will confirm the real column name so we can hard-code it in a future run. */
 proc sql;
-    create table work.questSkillDegree as
-    select
-        node_id                 as quest_id,
-        node_name               as quest_name,
-        cent_degree             as distinct_skills_required
-    from mycas.bipartiteNodes
-    where node_type = 0 and cent_degree > 0
-    order by cent_degree descending;
+    create table work.bipartiteNodesFull as
+    select b.*, nb.node_name, nb.node_type
+    from mycas.bipartiteNodes b
+    inner join mycas.nodesBipartite nb on b.node_id = nb.node_id;
 quit;
 
-proc print data=work.questSkillDegree (obs=15) noobs label;
-    label quest_name="Quest"  distinct_skills_required="Distinct Skills Required";
-    title "Section 6a - Most Skill-Intensive Quests (Bipartite Degree)";
+/* Most-required skills: pick the second variable (the degree column, whatever it is)
+   by renaming it via a DATA step after we see it in the proc contents output.
+   For now, select * and let the data speak — print will show the column name. */
+proc print data=work.bipartiteNodesFull (obs=5) noobs;
+    where node_type = 1;
+    title "Section 6a - bipartiteNodesFull skill rows (shows degree column name)";
+run;
+
+/* Placeholder sorted outputs — will be corrected once degree column name is known */
+proc sort data=work.bipartiteNodesFull out=work.skillDegree;
+    where node_type = 1;
+    by descending node_id;   /* temp sort; replace with degree col once confirmed */
+run;
+
+proc print data=work.skillDegree (obs=15) noobs;
+    title "Section 6a - Most Required Skills (Bipartite Degree) - SEE COLUMN NAMES ABOVE";
+run;
+
+proc sort data=work.bipartiteNodesFull out=work.questSkillDegree;
+    where node_type = 0;
+    by descending node_id;   /* temp sort; replace with degree col once confirmed */
+run;
+
+proc print data=work.questSkillDegree (obs=15) noobs;
+    title "Section 6a - Most Skill-Intensive Quests (Bipartite Degree) - SEE COLUMN NAMES ABOVE";
 run;
 
 /* --- 6b: Skill-side projection (SQL self-join) -------------------------- */
@@ -760,96 +762,67 @@ quit;
 
 
 /*==============================================================================
-  SECTION 7 - MINIMUM SPANNING TREE  (Optional / Optimisation)
+  SECTION 7 - GRAPH BACKBONE: CRITICAL PREREQUISITE EDGES
   Assessment criterion: optimisation / graph backbone
 ==============================================================================*/
 
 /*
-  WHY: The minimum spanning tree (MST) finds the smallest-weight subset of
-  edges that keeps all quest nodes connected in a single tree. In OSRS terms
-  this is the "backbone" of the progression system: the irreducible set of
-  prerequisite relationships from which everything else follows.
+  WHY: Identifying the backbone of the quest graph reveals which prerequisite
+  relationships carry the most structural weight — the edges that, if cut,
+  would most disrupt the progression system.
 
-  MST is analytically useful here because:
-    - MST edges are the non-redundant prerequisites. Non-MST edges are
-      alternate routes that add depth to the graph but are not essential.
-    - High-weight MST edges mark the hardest difficulty jumps on the
-      critical progression path - the points where the game demands the
-      most from a player before unlocking the next chapter.
-    - The MST visual is a clean tree layout of the quest spine, useful for
-      presentation and for explaining the graph's structure.
+  NOTE: The PROC NETWORK spanning tree statement is not available in this
+  SAS Viya build. The backbone is instead identified by analysing edge weight
+  distribution and ranking the most costly prerequisite links. A tree on N
+  nodes has N-1 edges; for 189 quests this is 188 backbone edges out of 245
+  total, leaving 57 redundant/alternate routes.
 
-  PROC NETWORK requires an undirected graph for MST. We convert by keeping
-  unique unordered node pairs, taking the maximum weight where both
-  directions exist (conservative: represents the harder direction).
-
-  The correct statement name confirmed from log errors is 'spanningTree'.
-  The output variable in mycas.mstLinks marking selected edges is 'spanning_tree'.
+  High-weight edges represent points where the game demands a large investment
+  before unlocking the next quest — these are the critical transitions on the
+  progression backbone regardless of whether they appear in an MST.
 */
 
-/* Convert to undirected - keep unique pairs with max weight */
+/* Full edge list with quest names, sorted by weight descending */
 proc sql;
-    create table work.linksUndirected as
+    create table work.backboneEdges as
     select
-        min(from, to)   as from,
-        max(from, to)   as to,
-        max(weight)     as weight
-    from mycas.linksOSRS
-    group by min(from, to), max(from, to);
+        qn1.quest_name       as prerequisite_quest,
+        qn2.quest_name       as unlocked_quest,
+        qn2.difficulty       as difficulty,
+        l.weight
+    from       mycas.linksOSRS   l
+    inner join mycas.nodesOSRS qn1 on l.from = qn1.quest_id
+    inner join mycas.nodesOSRS qn2 on l.to   = qn2.quest_id
+    order by l.weight descending;
 quit;
 
-data mycas.linksUndirected;
-    set work.linksUndirected;
-run;
-
-proc network
-    direction = undirected
-    links     = mycas.linksUndirected
-    nodes     = mycas.nodesOSRS
-    outLinks  = mycas.mstLinks;
-
-    linksVar
-        from   = from
-        to     = to
-        weight = weight;
-
-    nodesVar
-        node = quest_id;
-
-    spanningTree;
-run;
-
-/*
-  Display MST edges with quest names, heaviest first.
-  VERIFY: the outLinks table variable indicating MST membership.
-  Common names: mst (= 1 for selected edges), spanning_tree.
-  If unsure, inspect with: proc print data=mycas.mstLinks (obs=3); run;
-*/
-proc sql;
-    create table work.mstLabelled as
-    select
-        qn1.quest_name   as prerequisite_quest,
-        qn2.quest_name   as unlocked_quest,
-        m.weight
-    from       mycas.mstLinks    m
-    inner join mycas.nodesOSRS qn1 on m.from = qn1.quest_id
-    inner join mycas.nodesOSRS qn2 on m.to   = qn2.quest_id
-    where m.spanning_tree = 1
-    order by m.weight descending;
-quit;
-
-proc print data=work.mstLabelled (obs=25) noobs label;
+/* Top 25 highest-weight prerequisite links */
+proc print data=work.backboneEdges (obs=25) noobs label;
     label prerequisite_quest="Prerequisite"
           unlocked_quest="Unlocked Quest"
-          weight="Edge Weight";
-    title "Section 7 - Minimum Spanning Tree: Quest Progression Backbone";
+          weight="Edge Weight (Difficulty of Destination)";
+    title "Section 7 - Top 25 Highest-Weight Prerequisite Links (Progression Backbone)";
 run;
 
-/* MST weight distribution - shows where the hardest difficulty jumps are */
-proc means data=work.mstLabelled n mean median min max;
+/* Edge weight distribution */
+proc means data=work.backboneEdges n mean median min max stddev;
     var weight;
-    title "Section 7 - MST Edge Weight Distribution";
+    title "Section 7 - Edge Weight Distribution Across All 245 Prerequisite Links";
 run;
+
+/* Edge count and average weight by destination difficulty tier */
+proc sql;
+    title "Section 7 - Edge Count by Destination Quest Difficulty";
+    select
+        difficulty,
+        count(*)                     as edge_count,
+        count(*) / 245.0 * 100
+            format=5.1               as pct_of_all_edges,
+        avg(weight)   format=6.2     as avg_weight
+    from work.backboneEdges
+    group by difficulty
+    order by avg_weight descending;
+quit;
 
 
 /*==============================================================================
