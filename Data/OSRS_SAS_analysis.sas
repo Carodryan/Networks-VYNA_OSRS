@@ -161,6 +161,7 @@ proc sql;
 quit;
 
 
+options obs=max;
 /*==============================================================================
   SECTION 1 - NETWORK CLASSIFICATION AND SUMMARY
   Assessment criterion: classification + summary measures
@@ -218,6 +219,7 @@ proc freq data=mycas.nodesOSRS;
 run;
 
 
+options obs=max;
 /*==============================================================================
   SECTION 2 - CENTRALITY ANALYSIS
   Assessment criterion: centrality measures
@@ -279,9 +281,8 @@ proc print data=mycas.centralityOSRS (obs=3); run;
 
 /*
   Join centrality scores to quest names.
-  Column names below assume no 'cent_' prefix (confirmed missing from error log).
-  For directed degree = weight, expected output columns: degree_in, degree_out
-  If these also fail, read the proc print above for the actual names.
+  Column names confirmed from proc print output (SAS Viya 2025.09):
+    centr_degree_in_wt, centr_degree_out_wt, centr_between_wt, centr_pagerank_wt
 */
 proc sql;
     create table work.centralityLabelled as
@@ -289,10 +290,10 @@ proc sql;
         c.quest_id,
         n.quest_name,
         n.difficulty,
-        c.degree_in,
-        c.degree_out,
-        c.between      as betweenness,
-        c.pagerank
+        c.centr_degree_in_wt   as degree_in,
+        c.centr_degree_out_wt  as degree_out,
+        c.centr_between_wt     as betweenness,
+        c.centr_pagerank_wt    as pagerank
     from mycas.centralityOSRS  c
     inner join mycas.nodesOSRS n on c.quest_id = n.quest_id;
 quit;
@@ -335,6 +336,7 @@ run;
    Uncomment and add 'eigen' to the centrality statement above to enable it. */
 
 
+options obs=max;
 /*==============================================================================
   SECTION 3 - CONNECTED COMPONENTS, BICONNECTED COMPONENTS,
               AND ARTICULATION POINTS
@@ -362,6 +364,7 @@ run;
       quest progression web into disconnected parts. The heavier the quest's
       node_weight, the more demanding the chokepoint.
 */
+/* --- 3a: Connected components (PROC NETWORK summary statement) ----------- */
 proc network
     direction = directed
     links     = mycas.linksOSRS
@@ -376,18 +379,20 @@ proc network
     nodesVar
         node = quest_id;
 
-    connectedComponents;
-    biConnectedComponents;
+    summary
+        connectedComponents
+        out = mycas.compSummary;
 run;
 
-%put === SECTION 3 - Component Results ===;
+/* DIAGNOSTIC — remove before submission */
+proc print data=mycas.componentsOSRS (obs=3); run;
+
+%put === SECTION 3 - Connected Component Results ===;
 %put &_NETWORK_;
 /*
   With course macros:
-    %put Connected components  : %GetValue(mac=_NETWORK_, item=NUM_COMPONENTS);
-    %put Biconnected components: %GetValue(mac=_NETWORK_, item=NUM_BICOMPONENTS);
-    %put Articulation points   : %GetValue(mac=_NETWORK_, item=NUM_ARTICULATION_POINTS);
-  VERIFY: confirm item names above.
+    %put Connected components: %GetValue(mac=_NETWORK_, item=NUM_COMPONENTS);
+  VERIFY: confirm item name against your SAS Viya version.
 */
 
 /* Component size distribution */
@@ -397,7 +402,7 @@ proc sql;
         c.quest_id,
         n.quest_name,
         n.difficulty,
-        c.concomp   /* connected component ID; VERIFY variable name */
+        c.concomp   /* connected component ID */
     from mycas.componentsOSRS  c
     inner join mycas.nodesOSRS n on c.quest_id = n.quest_id
     order by c.concomp, n.quest_name;
@@ -408,23 +413,44 @@ proc freq data=work.compLabelled;
     title "Section 3 - Quest Count per Connected Component";
 run;
 
+/* --- 3b: Biconnected components and articulation points (PROC OPTNETWORK) - */
+/*
+  biConnectedComponents requires PROC OPTNETWORK, not PROC NETWORK.
+  Output: outNodes contains artpoint=1 for articulation point nodes.
+  Node join column in artPointsOSRS may be 'node' rather than 'quest_id' —
+  see diagnostic print below.
+*/
+proc optnetwork
+    links    = mycas.linksOSRS
+    outNodes = mycas.artPointsOSRS;
+
+    linksVar
+        from = from
+        to   = to;
+
+    biconnectedComponents;
+run;
+
+/* DIAGNOSTIC — confirm node column name (quest_id vs node) and artpoint column */
+proc print data=mycas.artPointsOSRS (obs=5); run;
+
 /*
   Articulation points: quests whose removal disconnects the graph.
-  Sorted by node_weight descending so the most demanding chokepoints
-  appear first - these are the best candidates for scenario analysis.
-  VERIFY: biConnectedComponents writes artpoint=1 for articulation nodes.
+  Sorted by node_weight descending — most demanding chokepoints first.
+  If the join column in artPointsOSRS is 'node' not 'quest_id', update
+  the ON clause below: on a.node = n.quest_id
 */
 proc sql;
     create table work.artPoints as
     select
-        c.quest_id,
+        a.node           as quest_id,
         n.quest_name,
         n.difficulty,
         n.num_quest_prereqs,
         n.node_weight
-    from mycas.componentsOSRS  c
-    inner join mycas.nodesOSRS n on c.quest_id = n.quest_id
-    where c.artpoint = 1
+    from mycas.artPointsOSRS  a
+    inner join mycas.nodesOSRS n on a.node = n.quest_id
+    where a.artpoint = 1
     order by n.node_weight descending;
 quit;
 
@@ -435,6 +461,7 @@ proc print data=work.artPoints noobs label;
 run;
 
 
+options obs=max;
 /*==============================================================================
   SECTION 4 - COMMUNITY DETECTION
   Assessment criterion: community / cluster analysis
@@ -456,7 +483,8 @@ proc network
     direction = directed
     links     = mycas.linksOSRS
     nodes     = mycas.nodesOSRS
-    outNodes  = mycas.communityOSRS;
+    outNodes  = mycas.communityOSRS
+    outLinks  = mycas.commLinksOSRS;
 
     linksVar
         from   = from
@@ -467,10 +495,13 @@ proc network
         node = quest_id;
 
     community
-        algorithm = louvain
-        outLevel  = mycas.communityLevel;
-        /* output variable in mycas.communityOSRS is named 'community' */
+        resolutionList = 1.0
+        outLevel       = mycas.communityLevel;
+        /* output column in mycas.communityOSRS is 'community_1' (first resolution level) */
 run;
+
+/* DIAGNOSTIC — remove before submission */
+proc print data=mycas.communityOSRS (obs=3); run;
 
 proc sql;
     create table work.communityLabelled as
@@ -478,39 +509,40 @@ proc sql;
         c.quest_id,
         n.quest_name,
         n.difficulty,
-        c.community   /* VERIFY: variable name */
+        c.community_1
     from mycas.communityOSRS  c
     inner join mycas.nodesOSRS n on c.quest_id = n.quest_id
-    order by c.community, n.difficulty, n.quest_name;
+    order by c.community_1, n.difficulty, n.quest_name;
 quit;
 
 /* How many quests per community? */
 proc freq data=work.communityLabelled;
-    tables community / nocum;
-    title "Section 4 - Quests per Community (Louvain Algorithm)";
+    tables community_1 / nocum;
+    title "Section 4 - Quests per Community (Louvain / Resolution 1.0)";
 run;
 
 /* Community size summary with percentage */
 proc sql;
     title "Section 4 - Community Size Summary";
     select
-        community,
+        community_1,
         count(*)                      as size,
         count(*) / 189.0 * 100
             format=5.1                as pct_of_all_quests
     from work.communityLabelled
-    group by community
+    group by community_1
     order by size descending;
 quit;
 
 /* Full listing so we can examine which quests cluster together */
 proc print data=work.communityLabelled noobs label;
-    label quest_name="Quest"  community="Community ID";
-    var community quest_id quest_name difficulty;
+    label quest_name="Quest"  community_1="Community ID";
+    var community_1 quest_id quest_name difficulty;
     title "Section 4 - Full Community Assignment Listing";
 run;
 
 
+options obs=max;
 /*==============================================================================
   SECTION 5 - SHORTEST PATHS
   Assessment criterion: path analysis / graph diameter
@@ -540,8 +572,7 @@ run;
 proc network
     direction = directed
     links     = mycas.linksOSRS
-    nodes     = mycas.nodesOSRS
-    outNodes  = mycas.spOSRS;
+    nodes     = mycas.nodesOSRS;
 
     linksVar
         from   = from
@@ -552,31 +583,30 @@ proc network
         node = quest_id;
 
     shortestPath
-        source        = 18
-        outPathsLinks = mycas.spLinksOSRS;
+        source     = 18
+        outWeights = mycas.spWeightsOSRS
+        outPaths   = mycas.spPathsOSRS;
         /*
-          VERIFY: 'outPathsLinks' stores one row per edge on each discovered path.
-          The source= option computes single-source shortest paths to all nodes.
-          Confirm parameter name against your SAS Viya PROC NETWORK documentation.
+          outWeights: one row per reachable node — contains path_weight (weighted distance)
+                      and a node column that may be named 'sink' rather than 'quest_id'.
+          outPaths:   one row per edge on each discovered path.
         */
 run;
+
+/* DIAGNOSTIC — confirm column names (sink vs quest_id, and path_weight) */
+proc print data=mycas.spWeightsOSRS (obs=5); run;
 
 proc sql;
     create table work.spLabelled as
     select
-        s.quest_id,
+        s.sink         as quest_id,   /* VERIFY: may be 'sink' or 'quest_id' */
         n.quest_name,
         n.difficulty,
-        s.sppathlen   as path_length   /* VERIFY: weighted path length variable */
-    from mycas.spOSRS     s
-    inner join mycas.nodesOSRS n on s.quest_id = n.quest_id
-    where s.sppathlen is not null
-    order by s.sppathlen descending;
-    /*
-      If the variable is not named sppathlen, inspect mycas.spOSRS:
-        proc print data=mycas.spOSRS (obs=5); run;
-      Common alternatives: spdist, sp_path_length.
-    */
+        s.path_weight  as path_length
+    from mycas.spWeightsOSRS  s
+    inner join mycas.nodesOSRS n on s.sink = n.quest_id
+    where s.path_weight is not null
+    order by s.path_weight descending;
 quit;
 
 /* Longest paths from Druidic Ritual - diameter candidates */
@@ -602,6 +632,7 @@ proc sql;
 quit;
 
 
+options obs=max;
 /*==============================================================================
   SECTION 6 - BIPARTITE ANALYSIS (QUEST-SKILL GRAPH)
   Assessment criterion: bipartite graph analysis and projection
@@ -645,20 +676,22 @@ proc network
         node = node_id;
 
     centrality degree = unweight;
-    /* degree = unweight counts raw connections (how many quests require each skill) */
+    /* degree = unweight; output column is centr_degree_unwt (confirmed naming convention) */
 run;
+
+/* DIAGNOSTIC — remove before submission */
+proc print data=mycas.bipartiteNodes (obs=3); run;
 
 /* Most-required skills (skill side of bipartite graph) */
 proc sql;
     create table work.skillDegree as
     select
-        node_id                 as skill_id,
-        node_name               as skill_name,
-        degree                  as quests_requiring
-        /* column name matches degree = unweight option, no cent_ prefix */
+        node_id                    as skill_id,
+        node_name                  as skill_name,
+        centr_degree_unwt          as quests_requiring
     from mycas.bipartiteNodes
     where node_type = 1
-    order by degree descending;
+    order by centr_degree_unwt descending;
 quit;
 
 proc print data=work.skillDegree noobs label;
@@ -670,12 +703,12 @@ run;
 proc sql;
     create table work.questSkillDegree as
     select
-        node_id                 as quest_id,
-        node_name               as quest_name,
-        degree                  as distinct_skills_required
+        node_id                    as quest_id,
+        node_name                  as quest_name,
+        centr_degree_unwt          as distinct_skills_required
     from mycas.bipartiteNodes
-    where node_type = 0 and degree > 0
-    order by degree descending;
+    where node_type = 0 and centr_degree_unwt > 0
+    order by centr_degree_unwt descending;
 quit;
 
 proc print data=work.questSkillDegree (obs=15) noobs label;
@@ -753,6 +786,7 @@ proc sql;
 quit;
 
 
+options obs=max;
 /*==============================================================================
   SECTION 7 - GRAPH BACKBONE: CRITICAL PREREQUISITE EDGES
   Assessment criterion: optimisation / graph backbone
@@ -823,6 +857,7 @@ proc sql;
 quit;
 
 
+options obs=max;
 /*==============================================================================
   SECTION 8 - SUMMARY DASHBOARD
   Consolidated statistics for assessment presentation
